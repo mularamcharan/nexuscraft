@@ -1,0 +1,8 @@
+{
+  "name": "Remix PageGrab",
+  "description": "Instantly fetch and view the content of any web page by entering its URL.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,304 @@
+import { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
+import { 
+  Lock, CheckCircle2, Play, BookOpen, 
+  Rocket, Trophy, Clock, Star, HelpCircle
+} from "lucide-react";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { LessonStepper } from "@/components/tracks/LessonStepper";
+import { aiInnovationQuizzes, environmentalInnovationQuizzes } from "@/data/moduleQuizzes";
+import { softSkillsQuizzes, englishLearningQuizzes, interviewSkillsQuizzes } from "@/data/skillTrainingQuizzes";
+import { trackData } from "@/data/trackData";
+import { toast } from "sonner";
+
+const levelConfig = {
+  beginner: { label: "Beginner", icon: BookOpen, color: "text-blue-500" },
+  "low-intermediate": { label: "Low Intermediate", icon: Rocket, color: "text-orange-500" },
+  intermediate: { label: "Intermediate", icon: Trophy, color: "text-purple-500" },
+};
+
+export default function TrackDetail() {
+  const { trackId } = useParams<{ trackId: string }>();
+  const navigate = useNavigate();
+  const track = trackData[trackId as keyof typeof trackData];
+
+  const [completedLessons, setCompletedLessons] = useLocalStorage<string[]>(`${trackId}-lessons`, []);
+  const [projectScores, setProjectScores] = useLocalStorage<Record<string, number>>(`${trackId}-projects`, {});
+  const [quizScores, setQuizScores] = useLocalStorage<Record<string, number>>(`${trackId}-quizzes`, {});
+  const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
+  const [videoModules, setVideoModules] = useState<Record<string, { youtube_url: string; resource_pdf_url: string | null }>>({});
+
+  useEffect(() => {
+    const fetchVideos = async () => {
+      const { data } = await supabase
+        .from("video_modules")
+        .select("title, youtube_url, resource_pdf_url")
+        .eq("is_active", true);
+      if (data) {
+        const normalize = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ');
+        const mapped: Record<string, { youtube_url: string; resource_pdf_url: string | null }> = {};
+        data.forEach((v) => {
+          mapped[normalize(v.title)] = { youtube_url: v.youtube_url, resource_pdf_url: v.resource_pdf_url };
+        });
+        setVideoModules(mapped);
+      }
+    };
+    fetchVideos();
+  }, []);
+
+  const quizDataMap: Record<string, Record<string, any>> = {
+    "ai-innovation": aiInnovationQuizzes,
+    "environmental-innovation": environmentalInnovationQuizzes,
+    "soft-skills": softSkillsQuizzes,
+    "english-learning": englishLearningQuizzes,
+    "interview-skills": interviewSkillsQuizzes,
+  };
+  const quizData = quizDataMap[trackId || ""] || {};
+
+  if (!track) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Track not found</h1>
+          <Link to="/tracks"><Button>Back to Tracks</Button></Link>
+        </div>
+      </div>
+    );
+  }
+
+  const completedCount = completedLessons.length;
+  const totalLessons = track.lessons.length;
+  const progress = (completedCount / totalLessons) * 100;
+
+  const normalize = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ');
+
+  const isProjectUnlocked = (lessonRequired: string) => {
+    return completedLessons.includes(lessonRequired) && quizScores[lessonRequired] !== undefined && quizScores[lessonRequired] >= 70;
+  };
+
+  const handleQuizComplete = (lessonId: string, score: number, passed: boolean) => {
+    setQuizScores({ ...quizScores, [lessonId]: score });
+    if (passed) {
+      toast.success(`Quiz passed with ${score}%! Next module unlocked.`);
+    } else {
+      toast.error(`Score: ${score}%. You need 70% to pass. Try again!`);
+    }
+  };
+
+  const handleVideoCompleted = (lessonId: string) => {
+    if (!completedLessons.includes(lessonId)) {
+      setCompletedLessons([...completedLessons, lessonId]);
+    }
+  };
+
+  const handleFinishLesson = (lessonId: string) => {
+    // Check if there's a related project that is now unlocked
+    const relatedProject = track.projects.find(p => p.lessonRequired === lessonId);
+    const projectUnlocked = relatedProject && isProjectUnlocked(lessonId);
+
+    if (relatedProject && projectUnlocked) {
+      // Redirect to related project
+      setActiveLessonId(null);
+      navigate(`/project/${trackId}/${relatedProject.id}`);
+    } else {
+      // Find the next lesson in the track
+      const currentIndex = track.lessons.findIndex(l => l.id === lessonId);
+      const nextLesson = currentIndex < track.lessons.length - 1 ? track.lessons[currentIndex + 1] : null;
+
+      if (nextLesson) {
+        const nextVideo = videoModules[normalize(nextLesson.title)];
+        if (nextVideo?.youtube_url) {
+          setActiveLessonId(nextLesson.id);
+          toast.info(`Starting next module: ${nextLesson.title}`);
+        } else {
+          setActiveLessonId(null);
+          toast.success("Module completed! Next module coming soon.");
+        }
+      } else {
+        setActiveLessonId(null);
+        toast.success("🎉 You've completed all modules in this track!");
+      }
+    }
+  };
+
+  // Find the active lesson data
+  const activeLesson = activeLessonId ? track.lessons.find(l => l.id === activeLessonId) : null;
+  const activeVideoModule = activeLesson ? videoModules[normalize(activeLesson.title)] : null;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      
+      {/* Track Header */}
+      <section className={`relative py-12 bg-gradient-to-r ${track.color}`}>
+        <div className="container">
+          <div className="flex items-center gap-4 mb-4">
+            <Link to="/tracks" className="text-white/80 hover:text-white text-sm">← Back to Tracks</Link>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-white/20 backdrop-blur">
+              <track.icon className="h-10 w-10 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-display font-bold text-white">{track.title}</h1>
+              <p className="text-white/80">Track your learning journey</p>
+            </div>
+          </div>
+          <div className="mt-6 max-w-md">
+            <div className="flex justify-between text-sm text-white/80 mb-2">
+              <span>{completedCount} of {totalLessons} lessons completed</span>
+              <span>{Math.round(progress)}%</span>
+            </div>
+            <Progress value={progress} className="h-3 bg-white/20" />
+          </div>
+        </div>
+      </section>
+
+      <div className="container py-8">
+        {/* Active Lesson Stepper */}
+        {activeLessonId && activeLesson && activeVideoModule && (
+          <div className="mb-8 max-w-3xl mx-auto">
+            <LessonStepper
+              lessonId={activeLesson.id}
+              lessonTitle={activeLesson.title}
+              lessonDescription={activeLesson.description}
+              trackTitle={track.title}
+              trackColor={track.color}
+              videoUrl={activeVideoModule.youtube_url}
+              resourcePdfUrl={activeVideoModule.resource_pdf_url}
+              quizQuestions={quizData[activeLesson.id] || null}
+              learningObjectives={activeLesson.learningObjectives}
+              onComplete={(score, passed) => handleQuizComplete(activeLesson.id, score, passed)}
+              onClose={() => setActiveLessonId(null)}
+              onVideoCompleted={() => handleVideoCompleted(activeLesson.id)}
+              onFinishLesson={() => handleFinishLesson(activeLesson.id)}
+            />
+          </div>
+        )}
+
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Lessons Column */}
+          <div>
+            <h2 className="text-xl font-display font-bold mb-4 flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-primary" />
+              Learning Modules
+            </h2>
+            <div className="space-y-4">
+              {track.lessons.map((lesson) => {
+                const isCompleted = completedLessons.includes(lesson.id);
+                const config = levelConfig[lesson.level];
+                const matchedVideo = videoModules[normalize(lesson.title)];
+                const isActive = activeLessonId === lesson.id;
+
+                return (
+                  <Card 
+                    key={lesson.id}
+                    className={`transition-all ${isCompleted ? 'border-primary/50 bg-primary/5' : ''} ${isActive ? 'ring-2 ring-primary' : ''}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-4">
+                        <div className={`p-2 rounded-lg ${isCompleted ? 'bg-primary/20' : 'bg-muted'}`}>
+                          {isCompleted ? (
+                            <CheckCircle2 className="h-5 w-5 text-primary" />
+                          ) : (
+                            <Play className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-xs font-medium ${config.color}`}>{config.label}</span>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> {lesson.duration}
+                            </span>
+                          </div>
+                          <h3 className="font-semibold text-foreground">{lesson.title}</h3>
+                          <p className="text-sm text-muted-foreground">{lesson.description}</p>
+                        </div>
+                        {matchedVideo?.youtube_url ? (
+                          <Button 
+                            size="sm" 
+                            onClick={() => setActiveLessonId(lesson.id)}
+                            variant={isActive ? "secondary" : "default"}
+                          >
+                            <Play className="h-3 w-3 mr-1" /> {isActive ? "Active" : "Start"}
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="outline" disabled>
+                            Coming Soon
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Projects Column */}
+          <div>
+            <h2 className="text-xl font-display font-bold mb-4 flex items-center gap-2">
+              <Rocket className="h-5 w-5 text-primary" />
+              Mini-Projects
+            </h2>
+            <div className="space-y-4">
+              {track.projects.map((project) => {
+                const unlocked = isProjectUnlocked(project.lessonRequired);
+                const score = projectScores[project.id];
+                const isCompleted = score !== undefined;
+
+                return (
+                  <Card 
+                    key={project.id}
+                    className={`transition-all ${!unlocked ? 'opacity-60' : ''} ${isCompleted ? 'border-primary/50 bg-primary/5' : ''}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-4">
+                        <div className={`p-2 rounded-lg ${isCompleted ? 'bg-primary/20' : unlocked ? track.bgColor : 'bg-muted'}`}>
+                          {isCompleted ? (
+                            <Star className="h-5 w-5 text-primary" />
+                          ) : unlocked ? (
+                            <Rocket className={`h-5 w-5 ${track.textColor}`} />
+                          ) : (
+                            <Lock className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-foreground">{project.title}</h3>
+                          <p className="text-sm text-muted-foreground">{project.description}</p>
+                          {isCompleted && (
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="text-xs font-medium text-primary">Score: {score}/100</span>
+                            </div>
+                          )}
+                        </div>
+                        {unlocked && !isCompleted && (
+                          <Link to={`/project/${trackId}/${project.id}`}>
+                            <Button size="sm" className={`bg-gradient-to-r ${track.color} text-white`}>Build</Button>
+                          </Link>
+                        )}
+                        {isCompleted && (
+                          <Link to={`/project/${trackId}/${project.id}`}>
+                            <Button size="sm" variant="outline">Improve</Button>
+                          </Link>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Footer />
+    </div>
+  );
+}

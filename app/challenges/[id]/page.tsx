@@ -1,0 +1,1 @@
+import{DemoWorkspace}from"@/components/demo-workspace";export default async function Challenge({params}:{params:Promise<{id:string}>}){const{id}=await params;return <DemoWorkspace view="challenge" challengeId={id}/>}

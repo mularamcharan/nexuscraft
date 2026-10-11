@@ -1,0 +1,106 @@
+import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Users, MessageSquare, Calendar, Building2, 
+  TrendingUp, Bell, Handshake, UserSearch
+} from "lucide-react";
+import { NetworkFeed } from "./NetworkFeed";
+import { NetworkConnections } from "./NetworkConnections";
+import { NetworkMessages } from "./NetworkMessages";
+import { NetworkEvents } from "./NetworkEvents";
+import { NetworkGroups } from "./NetworkGroups";
+import { NetworkProfile } from "./NetworkProfile";
+import { FounderCollaboration } from "./FounderCollaboration";
+import { FindCoBuilder } from "./FindCoBuilder";
+
+export function LearnerNetwork() {
+  const [activeTab, setActiveTab] = useState("feed");
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-display font-bold flex items-center gap-2">
+            <Users className="h-6 w-6 text-primary" />
+            Learner Interaction Space
+          </h2>
+          <p className="text-muted-foreground">
+            Connect, share, and grow with fellow learners
+          </p>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col lg:flex-row gap-6">
+        <TabsList className="flex flex-row lg:flex-col justify-start gap-1 w-full lg:w-48 h-auto shrink-0 overflow-x-auto lg:overflow-visible scrollbar-thin">
+          <TabsTrigger value="feed" aria-label="Feed" className="flex items-center gap-2 justify-start lg:w-full shrink-0">
+            <TrendingUp className="h-4 w-4" />
+            <span className="hidden sm:inline">Feed</span>
+          </TabsTrigger>
+          <TabsTrigger value="connections" aria-label="Network" className="flex items-center gap-2 justify-start lg:w-full shrink-0">
+            <Users className="h-4 w-4" />
+            <span className="hidden sm:inline">Network</span>
+          </TabsTrigger>
+          <TabsTrigger value="messages" aria-label="Messages" className="flex items-center gap-2 justify-start lg:w-full shrink-0">
+            <MessageSquare className="h-4 w-4" />
+            <span className="hidden sm:inline">Messages</span>
+          </TabsTrigger>
+          <TabsTrigger value="events" aria-label="Events" className="flex items-center gap-2 justify-start lg:w-full shrink-0">
+            <Calendar className="h-4 w-4" />
+            <span className="hidden sm:inline">Events</span>
+          </TabsTrigger>
+          <TabsTrigger value="groups" aria-label="Groups" className="flex items-center gap-2 justify-start lg:w-full shrink-0">
+            <Building2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Groups</span>
+          </TabsTrigger>
+          <TabsTrigger value="profile" aria-label="Profile" className="flex items-center gap-2 justify-start lg:w-full shrink-0">
+            <Bell className="h-4 w-4" />
+            <span className="hidden sm:inline">Profile</span>
+          </TabsTrigger>
+          <TabsTrigger value="founder" aria-label="Founder collaboration" className="flex items-center gap-2 justify-start lg:w-full shrink-0">
+            <Handshake className="h-4 w-4" />
+            <span className="hidden sm:inline">Founder Collab</span>
+          </TabsTrigger>
+          <TabsTrigger value="cobuilder" aria-label="Find co-builder" className="flex items-center gap-2 justify-start lg:w-full shrink-0">
+            <UserSearch className="h-4 w-4" />
+            <span className="hidden sm:inline">Find Co-Builder</span>
+          </TabsTrigger>
+        </TabsList>
+
+
+        <div className="flex-1 min-w-0">
+          <TabsContent value="feed" className="mt-0">
+            <NetworkFeed />
+          </TabsContent>
+
+          <TabsContent value="connections" className="mt-0">
+            <NetworkConnections />
+          </TabsContent>
+
+          <TabsContent value="messages" className="mt-0">
+            <NetworkMessages />
+          </TabsContent>
+
+          <TabsContent value="events" className="mt-0">
+            <NetworkEvents />
+          </TabsContent>
+
+          <TabsContent value="groups" className="mt-0">
+            <NetworkGroups />
+          </TabsContent>
+
+          <TabsContent value="profile" className="mt-0">
+            <NetworkProfile />
+          </TabsContent>
+
+          <TabsContent value="founder" className="mt-0">
+            <FounderCollaboration />
+          </TabsContent>
+
+          <TabsContent value="cobuilder" className="mt-0">
+            <FindCoBuilder />
+          </TabsContent>
+        </div>
+      </Tabs>
+    </div>
+  );
+}

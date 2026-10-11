@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+dist
+coverage
+*.tsbuildinfo
+database/*.sqlite
+database/*.sqlite-shm
+database/*.sqlite-wal
+.env*
+!.env.example
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*

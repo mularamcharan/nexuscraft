@@ -1,0 +1,1 @@
+import{DemoWorkspace}from"@/components/demo-workspace";export default function Challenges(){return <DemoWorkspace view="challenges"/>}

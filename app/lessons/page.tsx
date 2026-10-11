@@ -1,0 +1,1 @@
+import{DemoWorkspace}from"@/components/demo-workspace";export default async function Lessons({searchParams}:{searchParams:Promise<{id?:string}>}){const{id}=await searchParams;return <DemoWorkspace view="lessons" lessonId={id}/>}

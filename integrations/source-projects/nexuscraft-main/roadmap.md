@@ -1,0 +1,3 @@
+- [ ] Remove competition content and learner interaction space from the student-facing app.
+- [ ] Remove the Tasks section from Productivity Hub.
+- [ ] Verify the affected pages no longer render the removed content.
